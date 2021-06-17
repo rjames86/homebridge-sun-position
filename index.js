@@ -89,7 +89,22 @@ SunPositionAccessory.prototype.updatePosition = function () {
   var times = suncalc.getTimes(now, this.location.lat, this.location.long);
 
   // Arbitrary lux values for times.
-  var lux = Math.floor(Math.random() * 100) + 1;
+  var lux = 0.0001;
+  if (now >= times.sunrise && now <= times.sunriseEnd) {
+    lux = 400;
+  } else if (now > times.sunriseEnd && now <= times.goldenHourEnd) {
+    lux = 20000;
+  } else if (now >= times.goldenHour && times < times.sunsetStart) {
+    lux = 20000;
+  } else if (now >= times.sunsetStart && now <= times.sunset) {
+    lux = 400;
+  } else if (now > times.sunset && now <= times.night) {
+    lux = 40;
+  } else if (now >= times.nightEnd && now < times.sunrise) {
+    lux = 40;
+  } else if (now > times.goldenHourEnd && now < times.goldenHour) {
+    lux = 100000;
+  }
 
   this.service.setCharacteristic(Characteristic.CurrentAmbientLightLevel, lux);
 
@@ -103,8 +118,11 @@ SunPositionAccessory.prototype.updatePosition = function () {
 
   this.log("Sun is " + altitude + " high at " + azimuth);
 
-  this.service.setCharacteristic(AltitudeCharacteristic, altitude);
-  this.service.setCharacteristic(AzimuthCharacteristic, azimuth);
+  this.service.setCharacteristic(
+    Characteristic.AltitudeCharacteristic,
+    altitude
+  );
+  this.service.setCharacteristic(Characteristic.AzimuthCharacteristic, azimuth);
 
   setTimeout(this.updatePosition.bind(this), this.updatePeriod * 60 * 1000);
 };
