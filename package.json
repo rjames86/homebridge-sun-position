@@ -1,6 +1,6 @@
 {
-  "name": "homebridge-sun-position",
-  "version": "0.2.2",
+  "name": "homebridge-sun-position-ryan",
+  "version": "0.2.3",
   "description": "Homebridge plugin to expose the position of the sun for automation",
   "license": "ISC",
   "keywords": [
@@ -8,10 +8,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/keybuk/homebridge-sun-position.git"
+    "url": "git://github.com/rjames86/homebridge-sun-position.git"
   },
   "bugs": {
-    "url": "http://github.com/keybuk/homebridge-sun-position/issues"
+    "url": "http://github.com/rjames86/homebridge-sun-position/issues"
   },
   "engines": {
     "node": ">=0.12.0",
