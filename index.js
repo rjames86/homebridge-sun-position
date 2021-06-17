@@ -118,11 +118,8 @@ SunPositionAccessory.prototype.updatePosition = function () {
 
   this.log("Sun is " + altitude + " high at " + azimuth);
 
-  this.service.setCharacteristic(
-    Characteristic.AltitudeCharacteristic,
-    altitude
-  );
-  this.service.setCharacteristic(Characteristic.AzimuthCharacteristic, azimuth);
+  this.service.setCharacteristic(AltitudeCharacteristic, altitude);
+  this.service.setCharacteristic(AzimuthCharacteristic, azimuth);
 
   setTimeout(this.updatePosition.bind(this), this.updatePeriod * 60 * 1000);
 };
