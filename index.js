@@ -110,6 +110,7 @@ SunPositionAccessory.prototype.updatePosition = async function () {
   // }
 
   var tempestData = await this.tempest.getStationObservation(this.tempestStationID);
+  this.log(JSON.stringify(tempestData.observation, null, 2));
 
   this.service.setCharacteristic(Characteristic.CurrentAmbientLightLevel, tempestData.lux);
 
