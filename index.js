@@ -1,6 +1,6 @@
 var inherits = require("util").inherits;
 var suncalc = require("suncalc");
-var { Tempest } = require('./temptest');
+var { Tempest } = require('./tempest');
 
 let ALTITUDE_UUID = "a8af30e7-5c8e-43bf-bb21-3c1343229260";
 let AZIMUTH_UUID = "ace1dd10-2e46-4100-a74a-cc77f13f1bab";
