@@ -1,5 +1,6 @@
-var inherits = require("util").inherits,
-  suncalc = require("suncalc");
+var inherits = require("util").inherits;
+var suncalc = require("suncalc");
+var { Tempest } = require('./temptest');
 
 let ALTITUDE_UUID = "a8af30e7-5c8e-43bf-bb21-3c1343229260";
 let AZIMUTH_UUID = "ace1dd10-2e46-4100-a74a-cc77f13f1bab";
@@ -53,6 +54,8 @@ function SunPositionAccessory(log, config) {
   this.log = log;
   this.config = config;
   this.name = config.name;
+  this.tempest = new Tempest(config.tempestKey);
+  this.tempestStationID = config.tempestStationID;
 
   if (
     !config.location ||
@@ -85,29 +88,31 @@ SunPositionAccessory.prototype.getServices = function () {
   return [this.informationService, this.service];
 };
 
-SunPositionAccessory.prototype.updatePosition = function () {
+SunPositionAccessory.prototype.updatePosition = async function () {
   var now = new Date();
-  var times = suncalc.getTimes(now, this.location.lat, this.location.long);
+  // var times = suncalc.getTimes(now, this.location.lat, this.location.long);
 
-  // Arbitrary lux values for times.
-  var lux = 0.0001;
-  if (now >= times.sunrise && now <= times.sunriseEnd) {
-    lux = 400;
-  } else if (now > times.sunriseEnd && now <= times.goldenHourEnd) {
-    lux = 20000;
-  } else if (now >= times.goldenHour && times < times.sunsetStart) {
-    lux = 20000;
-  } else if (now >= times.sunsetStart && now <= times.sunset) {
-    lux = 400;
-  } else if (now > times.sunset && now <= times.night) {
-    lux = 40;
-  } else if (now >= times.nightEnd && now < times.sunrise) {
-    lux = 40;
-  } else if (now > times.goldenHourEnd && now < times.goldenHour) {
-    lux = 100000;
-  }
+  // // Arbitrary lux values for times.
+  // var lux = 0.0001;
+  // if (now >= times.sunrise && now <= times.sunriseEnd) {
+  //   lux = 400;
+  // } else if (now > times.sunriseEnd && now <= times.goldenHourEnd) {
+  //   lux = 20000;
+  // } else if (now >= times.goldenHour && times < times.sunsetStart) {
+  //   lux = 20000;
+  // } else if (now >= times.sunsetStart && now <= times.sunset) {
+  //   lux = 400;
+  // } else if (now > times.sunset && now <= times.night) {
+  //   lux = 40;
+  // } else if (now >= times.nightEnd && now < times.sunrise) {
+  //   lux = 40;
+  // } else if (now > times.goldenHourEnd && now < times.goldenHour) {
+  //   lux = 100000;
+  // }
 
-  this.service.setCharacteristic(Characteristic.CurrentAmbientLightLevel, lux);
+  var tempestData = await this.tempest.getStationObservation(this.tempestStationID);
+
+  this.service.setCharacteristic(Characteristic.CurrentAmbientLightLevel, tempestData.lux);
 
   var position = suncalc.getPosition(
     now,
