@@ -24,8 +24,7 @@ class Observations {
     
 }
 
-
-export class Tempest {
+class Tempest {
     constructor(token) {
         this.token = token;
     }
@@ -45,3 +44,5 @@ export class Tempest {
         
     }
 }
+
+module.exports.Tempest = Tempest;
