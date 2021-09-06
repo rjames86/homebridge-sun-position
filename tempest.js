@@ -1,4 +1,4 @@
-import * as axiosLib from 'axios';
+const axios = require('axios');
 
 const axios = axiosLib.default;
 
