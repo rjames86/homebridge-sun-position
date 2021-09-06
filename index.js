@@ -7,6 +7,7 @@ let AZIMUTH_UUID = "ace1dd10-2e46-4100-a74a-cc77f13f1bab";
 let UpdatePeriod = 5;
 
 module.exports = function (homebridge) {
+  console.log(homebridge.hap)
   Accessory = homebridge.hap.Accessory;
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
