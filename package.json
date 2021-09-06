@@ -1,6 +1,6 @@
 {
   "name": "homebridge-sun-position-ryan",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "description": "Homebridge plugin to expose the position of the sun for automation",
   "license": "ISC",
   "keywords": [
