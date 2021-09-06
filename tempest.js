@@ -30,7 +30,7 @@ class Tempest {
     }
 
     async getStationObservation(stationID) {
-        const resp = await this.makeRequest<TempestData>(STATION_OBSERVATION_URL(stationID));
+        const resp = await this.makeRequest(STATION_OBSERVATION_URL(stationID));
         return new Observations(resp);
     }
 
