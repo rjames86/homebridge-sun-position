@@ -1,7 +1,5 @@
 const axios = require('axios');
 
-const axios = axiosLib.default;
-
 const BASE_URL = 'https://swd.weatherflow.com/swd/rest';
 const STATION_OBSERVATION_URL = (STATION_ID) => `${BASE_URL}/observations/station/${STATION_ID}`;
 
