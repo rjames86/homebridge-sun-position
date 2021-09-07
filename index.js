@@ -119,6 +119,10 @@ SunPositionAccessory.prototype.updatePosition = async function () {
     lux = 0.0001;
   }
 
+  if (lux > 100000) {
+    lux = 100000;
+  }
+
   this.service.setCharacteristic(Characteristic.CurrentAmbientLightLevel, lux);
 
   var position = suncalc.getPosition(
