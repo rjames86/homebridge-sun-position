@@ -89,41 +89,6 @@ SunPositionAccessory.prototype.getServices = function () {
 
 SunPositionAccessory.prototype.updatePosition = async function () {
   var now = new Date();
-  // var times = suncalc.getTimes(now, this.location.lat, this.location.long);
-
-  // // Arbitrary lux values for times.
-  // var lux = 0.0001;
-  // if (now >= times.sunrise && now <= times.sunriseEnd) {
-  //   lux = 400;
-  // } else if (now > times.sunriseEnd && now <= times.goldenHourEnd) {
-  //   lux = 20000;
-  // } else if (now >= times.goldenHour && times < times.sunsetStart) {
-  //   lux = 20000;
-  // } else if (now >= times.sunsetStart && now <= times.sunset) {
-  //   lux = 400;
-  // } else if (now > times.sunset && now <= times.night) {
-  //   lux = 40;
-  // } else if (now >= times.nightEnd && now < times.sunrise) {
-  //   lux = 40;
-  // } else if (now > times.goldenHourEnd && now < times.goldenHour) {
-  //   lux = 100000;
-  // }
-
-  var tempestData = await this.tempest.getStationObservation(
-    this.tempestStationID
-  );
-  this.log(JSON.stringify(tempestData.observation, null, 2));
-
-  let lux = tempestData.lux;
-  if (lux === 0) {
-    lux = 0.0001;
-  }
-
-  if (lux > 100000) {
-    lux = 100000;
-  }
-
-  this.service.setCharacteristic(Characteristic.CurrentAmbientLightLevel, lux);
 
   var position = suncalc.getPosition(
     now,
@@ -137,6 +102,28 @@ SunPositionAccessory.prototype.updatePosition = async function () {
 
   this.service.setCharacteristic(AltitudeCharacteristic, altitude);
   this.service.setCharacteristic(AzimuthCharacteristic, azimuth);
+
+  try {
+    var tempestData = await this.tempest.getStationObservation(
+      this.tempestStationID
+    );
+    this.log(JSON.stringify(tempestData.observation, null, 2));
+  
+    let lux = tempestData.lux;
+    if (lux === 0) {
+      lux = 0.0001;
+    }
+  
+    if (lux > 100000) {
+      lux = 100000;
+    }
+  
+    this.service.setCharacteristic(Characteristic.CurrentAmbientLightLevel, lux);
+  } catch (err) {
+    this.log('failed to fetch tempest data', err.message);
+  }
+
+
 
   setTimeout(this.updatePosition.bind(this), this.updatePeriod * 60 * 1000);
 };
