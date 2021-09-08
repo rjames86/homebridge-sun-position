@@ -107,8 +107,7 @@ SunPositionAccessory.prototype.updatePosition = async function () {
     var tempestData = await this.tempest.getStationObservation(
       this.tempestStationID
     );
-    this.log(JSON.stringify(tempestData.observation, null, 2));
-  
+
     let lux = tempestData.lux;
     if (lux === 0) {
       lux = 0.0001;
@@ -117,7 +116,7 @@ SunPositionAccessory.prototype.updatePosition = async function () {
     if (lux > 100000) {
       lux = 100000;
     }
-  
+    this.log(`setting lux value: ${lux}`)
     this.service.setCharacteristic(Characteristic.CurrentAmbientLightLevel, lux);
   } catch (err) {
     this.log('failed to fetch tempest data', err.message);
