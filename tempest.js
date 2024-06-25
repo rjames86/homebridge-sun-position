@@ -11,10 +11,10 @@ class Observations {
     }
 
     get airTemperature() {
-        if (this.tempestData.station_units.units_temp === "f") {
-            const r = 1.8 * this.observation.air_temperature + 32;
-            return Math.round(100 * r) / 100;
-        }
+        // if (this.tempestData.station_units.units_temp === "f") {
+        //     const r = 1.8 * this.observation.air_temperature + 32;
+        //     return Math.round(100 * r) / 100;
+        // }
         return this.observation.air_temperature;
     }
 
