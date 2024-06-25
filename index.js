@@ -116,8 +116,9 @@ SunPositionAccessory.prototype.updatePosition = async function () {
     if (lux > 100000) {
       lux = 100000;
     }
-    this.log(`setting lux value: ${lux}`)
+    this.log(`setting lux value: ${lux}. Temperature is ${tempestData.airTemperature()}`)
     this.service.setCharacteristic(Characteristic.CurrentAmbientLightLevel, lux);
+    this.service.setCharacteristic(Characteristic.CurrentTemperature, tempestData.airTemperature())
   } catch (err) {
     this.log('failed to fetch tempest data', err.message);
   }
