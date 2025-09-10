@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "ExampleHomebridgePlugin",
+  "pluginAlias": "RyanTempest",
   "pluginType": "platform",
   "singular": true,
   "strictValidation": false,
@@ -10,8 +10,77 @@
         "title": "Name",
         "type": "string",
         "required": true,
-        "default": "Example Dynamic Platform"
+        "default": "Tempest"
+      },
+      "location": {
+        "title": "Location",
+        "type": "object",
+        "required": true,
+        "properties": {
+          "lat": {
+            "title": "Latitude",
+            "type": "number",
+            "required": true,
+            "minimum": -90,
+            "maximum": 90,
+            "description": "Latitude of your location in decimal degrees"
+          },
+          "long": {
+            "title": "Longitude",
+            "type": "number",
+            "required": true,
+            "minimum": -180,
+            "maximum": 180,
+            "description": "Longitude of your location in decimal degrees"
+          }
+        }
+      },
+      "tempestKey": {
+        "title": "Tempest API Key",
+        "type": "string",
+        "description": "WeatherFlow Tempest API key for real-time weather data (optional)"
+      },
+      "tempestStationID": {
+        "title": "Tempest Station ID",
+        "type": "string",
+        "description": "WeatherFlow Tempest station ID for weather data (required if using Tempest API)"
+      },
+      "updatePeriod": {
+        "title": "Update Period (minutes)",
+        "type": "integer",
+        "default": 5,
+        "minimum": 1,
+        "maximum": 60,
+        "description": "How often to update sun position and weather data (in minutes)"
       }
     }
-  }
+  },
+  "form": [
+    "name",
+    {
+      "type": "fieldset",
+      "title": "Location Settings",
+      "description": "Set your geographic location for accurate sun position calculations",
+      "items": [
+        "location.lat",
+        "location.long"
+      ]
+    },
+    {
+      "type": "fieldset",
+      "title": "Tempest Weather Integration (Optional)",
+      "description": "Connect to WeatherFlow Tempest weather station for real-time lux and temperature data",
+      "items": [
+        "tempestKey",
+        "tempestStationID"
+      ]
+    },
+    {
+      "type": "fieldset",
+      "title": "Advanced Settings",
+      "items": [
+        "updatePeriod"
+      ]
+    }
+  ]
 }

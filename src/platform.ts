@@ -1,17 +1,27 @@
 import type { API, Characteristic, DynamicPlatformPlugin, Logging, PlatformAccessory, PlatformConfig, Service } from 'homebridge';
 
-import { ExamplePlatformAccessory } from './platformAccessory.js';
-import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
+import { SunPositionAccessory } from './platformAccessory';
+import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 
 // This is only required when using Custom Services and Characteristics not support by HomeKit
 import { EveHomeKitTypes } from 'homebridge-lib/EveHomeKitTypes';
 
+export interface SunPositionConfig extends PlatformConfig {
+  location: {
+    lat: number;
+    long: number;
+  };
+  tempestKey?: string;
+  tempestStationID?: string;
+  updatePeriod?: number;
+}
+
 /**
- * HomebridgePlatform
+ * SunPositionPlatform
  * This class is the main constructor for your plugin, this is where you should
  * parse the user config and discover/register accessories with Homebridge.
  */
-export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
+export class SunPositionPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
   public readonly Characteristic: typeof Characteristic;
 
@@ -27,7 +37,7 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
 
   constructor(
     public readonly log: Logging,
-    public readonly config: PlatformConfig,
+    public readonly config: SunPositionConfig,
     public readonly api: API,
   ) {
     this.Service = api.hap.Service;
@@ -62,80 +72,61 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
   }
 
   /**
-   * This is an example method showing how to register discovered accessories.
-   * Accessories must only be registered once, previously created accessories
-   * must not be registered again to prevent "duplicate UUID" errors.
+   * Discover and register the sun position accessory.
    */
   discoverDevices() {
-    // EXAMPLE ONLY
-    // A real plugin you would discover accessories from the local network, cloud services
-    // or a user-defined array in the platform config.
-    const exampleDevices = [
-      {
-        exampleUniqueId: 'ABCD',
-        exampleDisplayName: 'Bedroom',
-      },
-      {
-        exampleUniqueId: 'EFGH',
-        exampleDisplayName: 'Kitchen',
-      },
-      {
-        // This is an example of a device which uses a Custom Service
-        exampleUniqueId: 'IJKL',
-        exampleDisplayName: 'Backyard',
-        CustomService: 'AirPressureSensor',
-      },
-    ];
-
-    // loop over the discovered devices and register each one if it has not already been registered
-    for (const device of exampleDevices) {
-      // generate a unique id for the accessory this should be generated from
-      // something globally unique, but constant, for example, the device serial
-      // number or MAC address
-      const uuid = this.api.hap.uuid.generate(device.exampleUniqueId);
-
-      // see if an accessory with the same uuid has already been registered and restored from
-      // the cached devices we stored in the `configureAccessory` method above
-      const existingAccessory = this.accessories.get(uuid);
-
-      if (existingAccessory) {
-        // the accessory already exists
-        this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
-
-        // if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. e.g.:
-        // existingAccessory.context.device = device;
-        // this.api.updatePlatformAccessories([existingAccessory]);
-
-        // create the accessory handler for the restored accessory
-        // this is imported from `platformAccessory.ts`
-        new ExamplePlatformAccessory(this, existingAccessory);
-
-        // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, e.g.:
-        // remove platform accessories when no longer present
-        // this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
-        // this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
-      } else {
-        // the accessory does not yet exist, so we need to create it
-        this.log.info('Adding new accessory:', device.exampleDisplayName);
-
-        // create a new accessory
-        const accessory = new this.api.platformAccessory(device.exampleDisplayName, uuid);
-
-        // store a copy of the device object in the `accessory.context`
-        // the `context` property can be used to store any data about the accessory you may need
-        accessory.context.device = device;
-
-        // create the accessory handler for the newly create accessory
-        // this is imported from `platformAccessory.ts`
-        new ExamplePlatformAccessory(this, accessory);
-
-        // link the accessory to your platform
-        this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-      }
-
-      // push into discoveredCacheUUIDs
-      this.discoveredCacheUUIDs.push(uuid);
+    // Validate configuration
+    if (!this.config.location || 
+        !Number.isFinite(this.config.location.lat) || 
+        !Number.isFinite(this.config.location.long)) {
+      this.log.error('Missing or invalid location configuration');
+      return;
     }
+
+    const sunDevice = {
+      uniqueId: 'sun-position',
+      displayName: this.config.name || 'Sun',
+      location: this.config.location,
+      tempestKey: this.config.tempestKey,
+      tempestStationID: this.config.tempestStationID,
+      updatePeriod: this.config.updatePeriod || 5,
+    };
+
+    // Generate UUID for the sun position accessory
+    const uuid = this.api.hap.uuid.generate(sunDevice.uniqueId);
+
+    // Check if accessory already exists
+    const existingAccessory = this.accessories.get(uuid);
+
+    if (existingAccessory) {
+      // the accessory already exists
+      this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
+
+      // Update the context with current config
+      existingAccessory.context.device = sunDevice;
+      this.api.updatePlatformAccessories([existingAccessory]);
+
+      // create the accessory handler for the restored accessory
+      new SunPositionAccessory(this, existingAccessory);
+    } else {
+      // the accessory does not yet exist, so we need to create it
+      this.log.info('Adding new accessory:', sunDevice.displayName);
+
+      // create a new accessory
+      const accessory = new this.api.platformAccessory(sunDevice.displayName, uuid);
+
+      // store a copy of the device object in the `accessory.context`
+      accessory.context.device = sunDevice;
+
+      // create the accessory handler for the newly create accessory
+      new SunPositionAccessory(this, accessory);
+
+      // link the accessory to your platform
+      this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+    }
+
+    // Track discovered UUID
+    this.discoveredCacheUUIDs.push(uuid);
 
     // you can also deal with accessories from the cache which are no longer present by removing them from Homebridge
     // for example, if your plugin logs into a cloud account to retrieve a device list, and a user has previously removed a device
