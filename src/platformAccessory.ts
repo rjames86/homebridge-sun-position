@@ -219,7 +219,7 @@ export class SunPositionAccessory {
       const altitude = (position.altitude * 180) / Math.PI;
       const azimuth = ((position.azimuth * 180) / Math.PI + 180) % 360;
 
-      this.platform.log.debug(`Sun is ${altitude.toFixed(1)}° high at ${azimuth.toFixed(1)}°`);
+      this.platform.log.info(`Sun is ${altitude.toFixed(1)}° high at ${azimuth.toFixed(1)}°`);
 
       // Update custom characteristics
       if (this.altitudeCharacteristic) {
@@ -253,7 +253,7 @@ export class SunPositionAccessory {
         this.sunBelowHorizonCharacteristic.updateValue(sunBelowHorizon);
       }
 
-      this.platform.log.debug(`Sun position: South=${sunFacingSouth}, East=${sunFacingEast}, West=${sunFacingWest}, High=${sunHighElevation}, BelowHorizon=${sunBelowHorizon}`);
+      this.platform.log.info(`Sun position: South=${sunFacingSouth}, East=${sunFacingEast}, West=${sunFacingWest}, High=${sunHighElevation}, BelowHorizon=${sunBelowHorizon}`);
 
       // Get Tempest data if available
       if (this.tempest && device.tempestStationID) {
@@ -268,7 +268,7 @@ export class SunPositionAccessory {
             lux = 100000;
           }
 
-          this.platform.log.debug(`Setting lux value: ${lux}. Temperature is ${tempestData.airTemperature}°C`);
+          this.platform.log.info(`Setting lux value: ${lux}. Temperature is ${tempestData.airTemperature}°C`);
           
           this.service.updateCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, lux);
           
