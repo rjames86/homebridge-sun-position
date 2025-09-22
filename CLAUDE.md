@@ -4,29 +4,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Homebridge plugin that exposes the position of the sun for HomeKit automation. The plugin creates a light sensor accessory that provides sun altitude, azimuth, and lux values from a Tempest weather station.
+This is a TypeScript-based Homebridge plugin that exposes the position of the sun for HomeKit automation. The plugin creates a light sensor accessory that provides sun altitude, azimuth, and lux values from a Tempest weather station.
 
 ## Key Dependencies
 
 - `suncalc`: Calculates sun position based on geographic coordinates
 - `axios`: HTTP client for API requests to Tempest weather station
-- Homebridge platform (requires Homebridge >=0.2.0, Node.js >=0.12.0)
+- `ws`: WebSocket client for real-time Tempest weather station streaming
+- `homebridge-lib`: Provides EveHomeKitTypes for custom characteristics
+- Homebridge platform (requires Homebridge >=1.8.0, Node.js >=18.20.4)
 
 ## Architecture
 
-The codebase consists of two main modules:
+The codebase consists of several TypeScript modules:
 
-### Core Plugin (`index.js`)
-- **SunPositionAccessory**: Main accessory class that implements the Homebridge accessory interface
-- **Custom Characteristics**: Defines `AltitudeCharacteristic` and `AzimuthCharacteristic` with custom UUIDs
+### Main Entry Point (`src/index.ts`)
+- Registers the platform with Homebridge
+
+### Platform (`src/platform.ts`)
+- **SunPositionPlatform**: Main platform class implementing DynamicPlatformPlugin
+- **Device Discovery**: Creates and manages sun position accessories
+- **Configuration Management**: Handles location, Tempest API keys, and update periods
+
+### Platform Accessory (`src/platformAccessory.ts`)
+- **SunPositionAccessory**: Main accessory class with custom characteristics
+- **Custom Characteristics**: Defines altitude, azimuth, and human-readable sun position characteristics
 - **Sun Position Calculation**: Uses `suncalc` library to calculate altitude/azimuth based on lat/long
-- **Update Loop**: Refreshes position every 5 minutes (configurable via `updatePeriod`)
-- **Service Integration**: Exposes data through HomeKit's LightSensor service
+- **Real-time Updates**: Handles both sun position and weather data updates
+- **Service Integration**: Exposes data through HomeKit's LightSensor and TemperatureSensor services
 
-### Tempest Weather Integration (`tempest.js`)
-- **Tempest class**: Handles API communication with WeatherFlow Tempest stations
+### Tempest Weather Integration (`src/tempest.ts`)
+- **Tempest class**: Handles WebSocket streaming and HTTP API communication with WeatherFlow Tempest stations
 - **Observations class**: Processes and formats weather data (lux values, air temperature)
-- **API Integration**: Fetches real-time weather data to provide accurate lux readings
+- **Real-time Streaming**: Uses WebSocket connection for immediate weather updates
 
 ## Configuration
 

@@ -2,7 +2,7 @@ import type { PlatformAccessory, Service, Characteristic } from 'homebridge';
 import * as suncalc from 'suncalc';
 
 import type { SunPositionPlatform } from './platform';
-import { Tempest } from './tempest';
+import { Tempest, Observations } from './tempest';
 
 // Custom characteristic UUIDs
 const ALTITUDE_UUID = 'a8af30e7-5c8e-43bf-bb21-3c1343229260';
@@ -84,6 +84,7 @@ export class SunPositionAccessory {
     // Initialize Tempest if configured
     if (device.tempestKey && device.tempestStationID) {
       this.tempest = new Tempest(device.tempestKey);
+      this.setupTempestWebSocket(device.tempestStationID);
     }
 
     // Start position updates
@@ -209,6 +210,76 @@ export class SunPositionAccessory {
     this.platform.log.debug('Custom characteristics created successfully');
   }
 
+  private setupTempestWebSocket(stationId: string) {
+    if (!this.tempest) {
+      return;
+    }
+
+    // Handle real-time weather observations
+    this.tempest.on('observation', (observations) => {
+      this.updateWeatherData(observations);
+    });
+
+    // Handle connection events
+    this.tempest.on('connected', () => {
+      this.platform.log.info('Connected to Tempest WebSocket');
+
+      // Fallback: Get initial data via HTTP API, then rely on WebSocket for updates
+      this.getInitialWeatherData(stationId);
+    });
+
+    this.tempest.on('disconnected', () => {
+      this.platform.log.warn('Disconnected from Tempest WebSocket, will attempt to reconnect');
+    });
+
+    this.tempest.on('error', (error) => {
+      this.platform.log.error('Tempest WebSocket error:', error instanceof Error ? error.message : 'Unknown error');
+    });
+
+    // Connect to WebSocket (async)
+    this.tempest.connectWebSocket(stationId).catch((error) => {
+      this.platform.log.error('Failed to connect to WebSocket:', error instanceof Error ? error.message : 'Unknown error');
+    });
+  }
+
+  private async getInitialWeatherData(stationId: string) {
+    if (!this.tempest) {
+      return;
+    }
+
+    try {
+      this.platform.log.info('Fetching initial weather data via HTTP API...');
+      const tempestData = await this.tempest.getStationObservation(stationId);
+      this.updateWeatherData(tempestData);
+      this.platform.log.info('Initial weather data loaded, now listening for real-time updates');
+    } catch (err) {
+      this.platform.log.warn('Failed to fetch initial Tempest data:', err instanceof Error ? err.message : 'Unknown error');
+    }
+  }
+
+  private updateWeatherData(tempestData: Observations) {
+    try {
+      let lux = tempestData.lux;
+      if (lux === 0) {
+        lux = 0.0001;
+      }
+      if (lux > 100000) {
+        lux = 100000;
+      }
+
+      this.platform.log.info(`Weather update - Lux: ${lux}, Temperature: ${tempestData.airTemperature}°C`);
+
+      this.service.updateCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, lux);
+
+      // Update temperature on the separate TemperatureSensor service
+      if (this.temperatureService) {
+        this.temperatureService.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, tempestData.airTemperature);
+      }
+    } catch (err) {
+      this.platform.log.error('Failed to update weather data:', err instanceof Error ? err.message : 'Unknown error');
+    }
+  }
+
   private async updatePosition() {
     const device = this.accessory.context.device as SunPositionDevice;
     const now = new Date();
@@ -253,33 +324,13 @@ export class SunPositionAccessory {
         this.sunBelowHorizonCharacteristic.updateValue(sunBelowHorizon);
       }
 
-      this.platform.log.info(`Sun position: South=${sunFacingSouth}, East=${sunFacingEast}, West=${sunFacingWest}, High=${sunHighElevation}, BelowHorizon=${sunBelowHorizon}`);
+      this.platform.log.info(
+        `Sun position: South=${sunFacingSouth}, East=${sunFacingEast}, West=${sunFacingWest}, ` +
+        `High=${sunHighElevation}, BelowHorizon=${sunBelowHorizon}`,
+      );
 
-      // Get Tempest data if available
-      if (this.tempest && device.tempestStationID) {
-        try {
-          const tempestData = await this.tempest.getStationObservation(device.tempestStationID);
-
-          let lux = tempestData.lux;
-          if (lux === 0) {
-            lux = 0.0001;
-          }
-          if (lux > 100000) {
-            lux = 100000;
-          }
-
-          this.platform.log.info(`Setting lux value: ${lux}. Temperature is ${tempestData.airTemperature}°C`);
-          
-          this.service.updateCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, lux);
-          
-          // Update temperature on the separate TemperatureSensor service
-          if (this.temperatureService) {
-            this.temperatureService.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, tempestData.airTemperature);
-          }
-        } catch (err) {
-          this.platform.log.warn('Failed to fetch Tempest data:', err instanceof Error ? err.message : 'Unknown error');
-        }
-      }
+      // Weather data is now handled by WebSocket real-time updates in setupTempestWebSocket
+      // No need to poll for weather data here anymore
     } catch (err) {
       this.platform.log.error('Failed to update sun position:', err instanceof Error ? err.message : 'Unknown error');
     }
@@ -293,6 +344,11 @@ export class SunPositionAccessory {
   public destroy() {
     if (this.updateTimer) {
       clearTimeout(this.updateTimer);
+    }
+
+    // Disconnect WebSocket
+    if (this.tempest) {
+      this.tempest.disconnect();
     }
   }
 }
