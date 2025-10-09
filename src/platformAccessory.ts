@@ -236,6 +236,15 @@ export class SunPositionAccessory {
       this.platform.log.error('Tempest WebSocket error:', error instanceof Error ? error.message : 'Unknown error');
     });
 
+    this.tempest.on('reconnectScheduled', (info: { interval: number; failures: number; isRateLimited: boolean }) => {
+      const minutes = Math.round(info.interval / 1000 / 60 * 10) / 10;
+      if (info.isRateLimited) {
+        this.platform.log.warn(`Rate limited (429). Waiting ${minutes} minutes before retry ${info.failures + 1}`);
+      } else {
+        this.platform.log.info(`Reconnection attempt ${info.failures + 1} scheduled in ${minutes} minutes`);
+      }
+    });
+
     // Connect to WebSocket (async)
     this.tempest.connectWebSocket(stationId).catch((error) => {
       this.platform.log.error('Failed to connect to WebSocket:', error instanceof Error ? error.message : 'Unknown error');

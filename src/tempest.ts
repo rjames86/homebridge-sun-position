@@ -105,9 +105,13 @@ export class Observations {
 export class Tempest extends EventEmitter {
   private token: string;
   private ws?: WebSocket;
-  private reconnectInterval = 5000; // 5 seconds
+  private baseReconnectInterval = 5000; // 5 seconds
+  private currentReconnectInterval = 5000;
+  private maxReconnectInterval = 300000; // 5 minutes
   private reconnectTimer?: NodeJS.Timeout;
   private isConnecting = false;
+  private consecutiveFailures = 0;
+  private maxRetries = 10;
 
   constructor(token: string) {
     super();
@@ -165,6 +169,8 @@ export class Tempest extends EventEmitter {
 
     this.ws.on('open', () => {
       this.isConnecting = false;
+      this.consecutiveFailures = 0;
+      this.currentReconnectInterval = this.baseReconnectInterval;
       this.emit('connected');
 
       // Start listening to station observations using the actual device ID
@@ -215,25 +221,59 @@ export class Tempest extends EventEmitter {
 
     this.ws.on('error', (error) => {
       this.isConnecting = false;
+      this.consecutiveFailures++;
+
+      // Check if this is a rate limiting error (429)
+      const isRateLimited = error.message && error.message.includes('429');
+
       this.emit('error', error);
-      this.scheduleReconnect(stationId);
+      this.scheduleReconnect(stationId, isRateLimited);
     });
 
     this.ws.on('close', () => {
       this.isConnecting = false;
+      this.consecutiveFailures++;
       this.emit('disconnected');
-      this.scheduleReconnect(stationId);
+      this.scheduleReconnect(stationId, false);
     });
   }
 
-  private scheduleReconnect(stationId: string): void {
+  private scheduleReconnect(stationId: string, isRateLimited: boolean): void {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
     }
 
+    // Check if we've exceeded max retries
+    if (this.consecutiveFailures >= this.maxRetries) {
+      this.emit('error', new Error(`Max reconnection attempts (${this.maxRetries}) exceeded. Stopping reconnection attempts.`));
+      return;
+    }
+
+    // Apply exponential backoff, with extra delay for rate limiting
+    if (isRateLimited) {
+      // For rate limiting, use a longer base interval
+      this.currentReconnectInterval = Math.min(
+        Math.max(30000, this.currentReconnectInterval * 2), // Start at 30s minimum for rate limits
+        this.maxReconnectInterval
+      );
+    } else {
+      // For other errors, use normal exponential backoff
+      this.currentReconnectInterval = Math.min(
+        this.baseReconnectInterval * Math.pow(2, this.consecutiveFailures - 1),
+        this.maxReconnectInterval
+      );
+    }
+
     this.reconnectTimer = setTimeout(async () => {
       await this.connectWebSocket(stationId);
-    }, this.reconnectInterval);
+    }, this.currentReconnectInterval);
+
+    // Emit reconnection info for logging
+    this.emit('reconnectScheduled', {
+      interval: this.currentReconnectInterval,
+      failures: this.consecutiveFailures,
+      isRateLimited,
+    });
   }
 
   disconnect(): void {
