@@ -276,6 +276,27 @@ export class Tempest extends EventEmitter {
     });
   }
 
+  isConnected(): boolean {
+    return this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  async reconnectIfNeeded(stationId: string): Promise<boolean> {
+    if (this.isConnected()) {
+      return true;
+    }
+
+    if (this.isConnecting) {
+      return false;
+    }
+
+    try {
+      await this.connectWebSocket(stationId);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   disconnect(): void {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);

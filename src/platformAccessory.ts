@@ -37,6 +37,7 @@ export class SunPositionAccessory {
   private temperatureService?: Service;
   private tempest?: Tempest;
   private updateTimer?: NodeJS.Timeout;
+  private weatherFallbackTimer?: NodeJS.Timeout;
   private altitudeCharacteristic?: Characteristic;
   private azimuthCharacteristic?: Characteristic;
   
@@ -85,6 +86,7 @@ export class SunPositionAccessory {
     if (device.tempestKey && device.tempestStationID) {
       this.tempest = new Tempest(device.tempestKey);
       this.setupTempestWebSocket(device.tempestStationID);
+      this.startWeatherDataFallback(device.tempestStationID);
     }
 
     // Start position updates
@@ -289,6 +291,44 @@ export class SunPositionAccessory {
     }
   }
 
+  private startWeatherDataFallback(stationId: string) {
+    const device = this.accessory.context.device as SunPositionDevice;
+
+    // Check connection and fallback to API every 2 minutes
+    const fallbackCheck = async () => {
+      if (!this.tempest) {
+        return;
+      }
+
+      // Check if WebSocket is connected
+      if (!this.tempest.isConnected()) {
+        this.platform.log.warn('WebSocket not connected, attempting reconnection...');
+
+        // Try to reconnect
+        const reconnected = await this.tempest.reconnectIfNeeded(stationId);
+
+        if (!reconnected) {
+          this.platform.log.warn('WebSocket reconnection failed, falling back to HTTP API');
+
+          // Fallback to HTTP API
+          try {
+            const tempestData = await this.tempest.getStationObservation(stationId);
+            this.updateWeatherData(tempestData);
+            this.platform.log.info('Weather data updated via HTTP API fallback');
+          } catch (err) {
+            this.platform.log.error('HTTP API fallback also failed:', err instanceof Error ? err.message : 'Unknown error');
+          }
+        }
+      }
+    };
+
+    // Run the fallback check every 2 minutes
+    this.weatherFallbackTimer = setInterval(fallbackCheck, 2 * 60 * 1000);
+
+    // Also run it once immediately after a short delay to check initial state
+    setTimeout(fallbackCheck, 10000);
+  }
+
   private async updatePosition() {
     const device = this.accessory.context.device as SunPositionDevice;
     const now = new Date();
@@ -353,6 +393,10 @@ export class SunPositionAccessory {
   public destroy() {
     if (this.updateTimer) {
       clearTimeout(this.updateTimer);
+    }
+
+    if (this.weatherFallbackTimer) {
+      clearInterval(this.weatherFallbackTimer);
     }
 
     // Disconnect WebSocket
