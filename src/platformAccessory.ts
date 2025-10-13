@@ -38,6 +38,7 @@ export class SunPositionAccessory {
   private tempest?: Tempest;
   private updateTimer?: NodeJS.Timeout;
   private weatherFallbackTimer?: NodeJS.Timeout;
+  private lastWebSocketUpdate: number = 0;
   private altitudeCharacteristic?: Characteristic;
   private azimuthCharacteristic?: Characteristic;
   
@@ -261,14 +262,14 @@ export class SunPositionAccessory {
     try {
       this.platform.log.info('Fetching initial weather data via HTTP API...');
       const tempestData = await this.tempest.getStationObservation(stationId);
-      this.updateWeatherData(tempestData);
+      this.updateWeatherData(tempestData, 'api');
       this.platform.log.info('Initial weather data loaded, now listening for real-time updates');
     } catch (err) {
       this.platform.log.warn('Failed to fetch initial Tempest data:', err instanceof Error ? err.message : 'Unknown error');
     }
   }
 
-  private updateWeatherData(tempestData: Observations) {
+  private updateWeatherData(tempestData: Observations, source: 'websocket' | 'api' = 'websocket') {
     try {
       let lux = tempestData.lux;
       if (lux === 0) {
@@ -278,7 +279,11 @@ export class SunPositionAccessory {
         lux = 100000;
       }
 
-      this.platform.log.info(`Weather update - Lux: ${lux}, Temperature: ${tempestData.airTemperature}°C`);
+      if (source === 'websocket') {
+        this.lastWebSocketUpdate = Date.now();
+      }
+
+      this.platform.log.info(`Weather update (${source}) - Lux: ${lux}, Temperature: ${tempestData.airTemperature}°C`);
 
       this.service.updateCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, lux);
 
@@ -294,36 +299,42 @@ export class SunPositionAccessory {
   private startWeatherDataFallback(stationId: string) {
     const device = this.accessory.context.device as SunPositionDevice;
 
-    // Check connection and fallback to API every 2 minutes
+    // Check connection and fallback to API frequently for eco mode
     const fallbackCheck = async () => {
       if (!this.tempest) {
         return;
       }
 
-      // Check if WebSocket is connected
-      if (!this.tempest.isConnected()) {
-        this.platform.log.warn('WebSocket not connected, attempting reconnection...');
+      const now = Date.now();
+      const timeSinceLastWebSocketUpdate = now - this.lastWebSocketUpdate;
 
-        // Try to reconnect
-        const reconnected = await this.tempest.reconnectIfNeeded(stationId);
+      // If no WebSocket update in last 2 minutes, or WebSocket disconnected, use HTTP API
+      const shouldUseAPI = !this.tempest.isConnected() || timeSinceLastWebSocketUpdate > 2 * 60 * 1000;
 
-        if (!reconnected) {
-          this.platform.log.warn('WebSocket reconnection failed, falling back to HTTP API');
+      if (shouldUseAPI) {
+        if (!this.tempest.isConnected()) {
+          this.platform.log.warn('WebSocket not connected, using HTTP API');
+        } else {
+          this.platform.log.info('No WebSocket updates recently (eco mode?), using HTTP API');
+        }
 
-          // Fallback to HTTP API
-          try {
-            const tempestData = await this.tempest.getStationObservation(stationId);
-            this.updateWeatherData(tempestData);
-            this.platform.log.info('Weather data updated via HTTP API fallback');
-          } catch (err) {
-            this.platform.log.error('HTTP API fallback also failed:', err instanceof Error ? err.message : 'Unknown error');
-          }
+        // Try to reconnect WebSocket if disconnected
+        if (!this.tempest.isConnected()) {
+          await this.tempest.reconnectIfNeeded(stationId);
+        }
+
+        // Use HTTP API for current data
+        try {
+          const tempestData = await this.tempest.getStationObservation(stationId);
+          this.updateWeatherData(tempestData, 'api');
+        } catch (err) {
+          this.platform.log.error('HTTP API request failed:', err instanceof Error ? err.message : 'Unknown error');
         }
       }
     };
 
-    // Run the fallback check every 2 minutes
-    this.weatherFallbackTimer = setInterval(fallbackCheck, 2 * 60 * 1000);
+    // Run the fallback check every 30 seconds for eco mode compatibility
+    this.weatherFallbackTimer = setInterval(fallbackCheck, 30 * 1000);
 
     // Also run it once immediately after a short delay to check initial state
     setTimeout(fallbackCheck, 10000);
