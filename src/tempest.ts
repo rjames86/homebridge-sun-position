@@ -190,10 +190,8 @@ export class Tempest extends EventEmitter {
     this.ws.on('message', (data: WebSocket.Data) => {
       try {
         const message: WebSocketMessage = JSON.parse(data.toString());
-        console.log('WebSocket message received:', message.type, message.device_id ? `device_id: ${message.device_id}` : 'no device_id');
 
         if (message.type === 'obs_st' && message.obs) {
-          console.log('Processing obs_st message, obs array length:', message.obs.length);
 
           const observation: WebSocketObservation = {
             type: 'obs_st',
@@ -205,7 +203,6 @@ export class Tempest extends EventEmitter {
           this.emit('observation', observations);
         } else if (message.type === 'obs_sky' && message.obs) {
           // Handle Sky sensor observations (older Tempest format)
-          console.log('Processing obs_sky message for device:', message.device_id);
 
           const observation: WebSocketObservation = {
             type: 'obs_st',

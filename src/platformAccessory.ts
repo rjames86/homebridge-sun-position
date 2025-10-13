@@ -313,7 +313,6 @@ export class SunPositionAccessory {
       // If no WebSocket update in last 2 minutes, or WebSocket disconnected, use HTTP API
       const shouldUseAPI = !this.tempest.isConnected() || timeSinceLastWebSocketUpdate > 2 * 60 * 1000;
 
-      this.platform.log.info(`Fallback check - WS connected: ${this.tempest.isConnected()}, Last WS update: ${Math.round(timeSinceLastWebSocketUpdate / 1000)}s ago, Should use API: ${shouldUseAPI}`);
 
       if (shouldUseAPI) {
         if (!this.tempest.isConnected()) {
@@ -337,15 +336,10 @@ export class SunPositionAccessory {
       }
     };
 
-    // Run the fallback check every 30 seconds for eco mode compatibility
-    this.weatherFallbackTimer = setInterval(fallbackCheck, 30 * 1000);
-    this.platform.log.info('Weather data fallback timer started - checking every 30 seconds');
-
+    // Run the fallback check every 10 minutes to avoid rate limiting
+    this.weatherFallbackTimer = setInterval(fallbackCheck, 10 * 60 * 1000);
     // Also run it once immediately after a short delay to check initial state
-    setTimeout(() => {
-      this.platform.log.info('Running initial fallback check in 10 seconds...');
-      fallbackCheck();
-    }, 10000);
+    setTimeout(fallbackCheck, 10000);
   }
 
   private async updatePosition() {
