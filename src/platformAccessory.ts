@@ -310,6 +310,7 @@ export class SunPositionAccessory {
 
       // If no WebSocket update in last 2 minutes, or WebSocket disconnected, use HTTP API
       const shouldUseAPI = !this.tempest.isConnected() || timeSinceLastWebSocketUpdate > 2 * 60 * 1000;
+      this.platform.log.debug(`Fallback check: ${shouldUseAPI} (last WS update ${Math.round(timeSinceLastWebSocketUpdate / 1000)}s ago). ${this.tempest.isConnected() ? 'WS connected' : 'WS disconnected'}`);
 
       if (shouldUseAPI) {
         if (!this.tempest.isConnected()) {
