@@ -190,8 +190,10 @@ export class Tempest extends EventEmitter {
     this.ws.on('message', (data: WebSocket.Data) => {
       try {
         const message: WebSocketMessage = JSON.parse(data.toString());
+        console.log('WebSocket message received:', message.type, message.device_id ? `device_id: ${message.device_id}` : 'no device_id');
 
         if (message.type === 'obs_st' && message.obs) {
+          console.log('Processing obs_st message, obs array length:', message.obs.length);
 
           const observation: WebSocketObservation = {
             type: 'obs_st',
@@ -224,7 +226,7 @@ export class Tempest extends EventEmitter {
       this.consecutiveFailures++;
 
       // Check if this is a rate limiting error (429)
-      const isRateLimited = error.message && error.message.includes('429');
+      const isRateLimited = !!(error.message && error.message.includes('429'));
 
       this.emit('error', error);
       this.scheduleReconnect(stationId, isRateLimited);
