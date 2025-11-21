@@ -218,16 +218,16 @@ export class SunPositionAccessory {
       return;
     }
 
-    // Handle real-time weather observations
+    // Handle real-time weather observations from WebSocket
     this.tempest.on('observation', (observations) => {
-      this.updateWeatherData(observations);
+      this.updateWeatherData(observations, 'websocket');
     });
 
     // Handle connection events
     this.tempest.on('connected', () => {
       this.platform.log.info('Connected to Tempest WebSocket');
 
-      // Fallback: Get initial data via HTTP API, then rely on WebSocket for updates
+      // Get initial data via HTTP API for immediate display
       this.getInitialWeatherData(stationId);
     });
 
@@ -239,16 +239,7 @@ export class SunPositionAccessory {
       this.platform.log.error('Tempest WebSocket error:', error instanceof Error ? error.message : 'Unknown error');
     });
 
-    this.tempest.on('reconnectScheduled', (info: { interval: number; failures: number; isRateLimited: boolean }) => {
-      const minutes = Math.round(info.interval / 1000 / 60 * 10) / 10;
-      if (info.isRateLimited) {
-        this.platform.log.warn(`Rate limited (429). Waiting ${minutes} minutes before retry ${info.failures + 1}`);
-      } else {
-        this.platform.log.info(`Reconnection attempt ${info.failures + 1} scheduled in ${minutes} minutes`);
-      }
-    });
-
-    // Connect to WebSocket (async)
+    // Start WebSocket connection (async)
     this.tempest.connectWebSocket(stationId, this.platform.log).catch((error) => {
       this.platform.log.error('Failed to connect to WebSocket:', error instanceof Error ? error.message : 'Unknown error');
     });
@@ -299,9 +290,9 @@ export class SunPositionAccessory {
   private startWeatherDataFallback(stationId: string) {
     const device = this.accessory.context.device as SunPositionDevice;
 
-    this.platform.log.info(`Starting weather data fallback checks every 30 seconds for eco mode compatibility`);
+    this.platform.log.info(`Starting weather data fallback checks every 10 minutes for WebSocket reliability`);
 
-    // Check connection and fallback to API frequently for eco mode
+    // Check WebSocket connection and fallback to API if needed
     const fallbackCheck = async () => {
       if (!this.tempest) {
         return;
@@ -310,19 +301,19 @@ export class SunPositionAccessory {
       const now = Date.now();
       const timeSinceLastWebSocketUpdate = now - this.lastWebSocketUpdate;
 
-      // If no WebSocket update in last 2 minutes, or WebSocket disconnected, use HTTP API
-      const shouldUseAPI = !this.tempest.isConnected() || timeSinceLastWebSocketUpdate > 2 * 60 * 1000;
-
+      // If no WebSocket update in last 5 minutes, or WebSocket disconnected, use HTTP API
+      const shouldUseAPI = !this.tempest.isConnected() || timeSinceLastWebSocketUpdate > 5 * 60 * 1000;
 
       if (shouldUseAPI) {
         if (!this.tempest.isConnected()) {
           this.platform.log.warn('WebSocket not connected, using HTTP API');
         } else {
-          this.platform.log.info('No WebSocket updates recently (eco mode?), using HTTP API');
+          this.platform.log.info('No WebSocket updates recently, using HTTP API');
         }
 
-        // Try to reconnect WebSocket if disconnected
+        // Try to reconnect WebSocket if disconnected (but don't be aggressive)
         if (!this.tempest.isConnected()) {
+          this.platform.log.info('WebSocket disconnected, attempting reconnection');
           await this.tempest.reconnectIfNeeded(stationId, this.platform.log);
         }
 
@@ -336,7 +327,7 @@ export class SunPositionAccessory {
       }
     };
 
-    // Run the fallback check every 10 minutes to avoid rate limiting
+    // Run the fallback check every 10 minutes for WebSocket monitoring
     this.weatherFallbackTimer = setInterval(fallbackCheck, 10 * 60 * 1000);
     // Also run it once immediately after a short delay to check initial state
     setTimeout(fallbackCheck, 10000);
