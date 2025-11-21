@@ -1,6 +1,8 @@
 import axios from 'axios';
 import WebSocket from 'ws';
 import { EventEmitter } from 'events';
+import { Logger, Logging } from 'homebridge';
+import { log } from 'console';
 
 const BASE_URL = 'https://swd.weatherflow.com/swd/rest';
 const STATION_OBSERVATION_URL = (stationId: string) => `${BASE_URL}/observations/station/${stationId}`;
@@ -151,7 +153,7 @@ export class Tempest extends EventEmitter {
     }
   }
 
-  async connectWebSocket(stationId: string): Promise<void> {
+  async connectWebSocket(stationId: string, logger: Logging): Promise<void> {
     if (this.isConnecting || (this.ws && this.ws.readyState === WebSocket.OPEN)) {
       return;
     }
@@ -225,19 +227,23 @@ export class Tempest extends EventEmitter {
       // Check if this is a rate limiting error (429)
       const isRateLimited = !!(error.message && error.message.includes('429'));
 
+      if (error.message) {
+        logger.error(`WebSocket error: ${error.message}`);
+      }
+
       this.emit('error', error);
-      this.scheduleReconnect(stationId, isRateLimited);
+      this.scheduleReconnect(stationId, isRateLimited, logger);
     });
 
     this.ws.on('close', () => {
       this.isConnecting = false;
       this.consecutiveFailures++;
       this.emit('disconnected');
-      this.scheduleReconnect(stationId, false);
+      this.scheduleReconnect(stationId, false, logger);
     });
   }
 
-  private scheduleReconnect(stationId: string, isRateLimited: boolean): void {
+  private scheduleReconnect(stationId: string, isRateLimited: boolean, logger: Logging): void {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
     }
@@ -264,7 +270,7 @@ export class Tempest extends EventEmitter {
     }
 
     this.reconnectTimer = setTimeout(async () => {
-      await this.connectWebSocket(stationId);
+      await this.connectWebSocket(stationId, logger);
     }, this.currentReconnectInterval);
 
     // Emit reconnection info for logging
@@ -279,7 +285,7 @@ export class Tempest extends EventEmitter {
     return this.ws?.readyState === WebSocket.OPEN;
   }
 
-  async reconnectIfNeeded(stationId: string): Promise<boolean> {
+  async reconnectIfNeeded(stationId: string, logger: Logging): Promise<boolean> {
     if (this.isConnected()) {
       return true;
     }
@@ -289,7 +295,7 @@ export class Tempest extends EventEmitter {
     }
 
     try {
-      await this.connectWebSocket(stationId);
+      await this.connectWebSocket(stationId, logger);
       return true;
     } catch (error) {
       return false;

@@ -249,7 +249,7 @@ export class SunPositionAccessory {
     });
 
     // Connect to WebSocket (async)
-    this.tempest.connectWebSocket(stationId).catch((error) => {
+    this.tempest.connectWebSocket(stationId, this.platform.log).catch((error) => {
       this.platform.log.error('Failed to connect to WebSocket:', error instanceof Error ? error.message : 'Unknown error');
     });
   }
@@ -323,7 +323,7 @@ export class SunPositionAccessory {
 
         // Try to reconnect WebSocket if disconnected
         if (!this.tempest.isConnected()) {
-          await this.tempest.reconnectIfNeeded(stationId);
+          await this.tempest.reconnectIfNeeded(stationId, this.platform.log);
         }
 
         // Use HTTP API for current data
