@@ -117,6 +117,145 @@ export class Observations {
     }
     return 0.0001; // Default lux value
   }
+
+  get humidity(): number {
+    if (this.observation) {
+      // HTTP API data
+      return this.observation.relative_humidity;
+    } else if (this.wsObservation && this.wsObservation.obs.length > 0) {
+      // WebSocket data - relative humidity is at index 8
+      return this.wsObservation.obs[0][8];
+    }
+    return 50; // Default humidity
+  }
+
+  get pressure(): number {
+    if (this.observation) {
+      // HTTP API data
+      return this.observation.barometric_pressure;
+    } else if (this.wsObservation && this.wsObservation.obs.length > 0) {
+      // WebSocket data - station pressure is at index 6
+      return this.wsObservation.obs[0][6];
+    }
+    return 1013.25; // Default pressure (sea level)
+  }
+
+  get uvIndex(): number {
+    if (this.observation) {
+      // HTTP API data
+      return this.observation.uv || 0;
+    } else if (this.wsObservation && this.wsObservation.obs.length > 0) {
+      // WebSocket data - UV index is at index 10
+      return this.wsObservation.obs[0][10];
+    }
+    return 0; // Default UV index
+  }
+
+  get solarRadiation(): number {
+    if (this.observation) {
+      // HTTP API data
+      return this.observation.solar_radiation || 0;
+    } else if (this.wsObservation && this.wsObservation.obs.length > 0) {
+      // WebSocket data - solar radiation is at index 11
+      return this.wsObservation.obs[0][11];
+    }
+    return 0; // Default solar radiation
+  }
+
+  get windSpeed(): number {
+    if (this.observation) {
+      // HTTP API data
+      return this.observation.wind_avg;
+    } else if (this.wsObservation && this.wsObservation.obs.length > 0) {
+      // WebSocket data - wind average is at index 2
+      return this.wsObservation.obs[0][2];
+    }
+    return 0; // Default wind speed
+  }
+
+  get windDirection(): number {
+    if (this.observation) {
+      // HTTP API data
+      return this.observation.wind_direction;
+    } else if (this.wsObservation && this.wsObservation.obs.length > 0) {
+      // WebSocket data - wind direction is at index 4
+      return this.wsObservation.obs[0][4];
+    }
+    return 0; // Default wind direction
+  }
+
+  get windGust(): number {
+    if (this.wsObservation && this.wsObservation.obs.length > 0) {
+      // WebSocket data - wind gust is at index 3
+      return this.wsObservation.obs[0][3];
+    }
+    return this.windSpeed; // Default to wind speed if no gust data
+  }
+
+  get rainAccumulated(): number {
+    if (this.wsObservation && this.wsObservation.obs.length > 0) {
+      // WebSocket data - rain accumulated is at index 12
+      return this.wsObservation.obs[0][12];
+    }
+    return 0; // Default rain accumulation
+  }
+
+  get precipitationType(): number {
+    if (this.wsObservation && this.wsObservation.obs.length > 0) {
+      // WebSocket data - precipitation type is at index 13 (0=none, 1=rain, 2=hail)
+      return this.wsObservation.obs[0][13];
+    }
+    return 0; // Default no precipitation
+  }
+
+  get lightningDistance(): number {
+    if (this.wsObservation && this.wsObservation.obs.length > 0) {
+      // WebSocket data - lightning strike avg distance is at index 14
+      return this.wsObservation.obs[0][14];
+    }
+    return 0; // Default no lightning
+  }
+
+  get lightningCount(): number {
+    if (this.wsObservation && this.wsObservation.obs.length > 0) {
+      // WebSocket data - lightning strike count is at index 15
+      return this.wsObservation.obs[0][15];
+    }
+    return 0; // Default no lightning
+  }
+
+  get batteryVoltage(): number {
+    if (this.wsObservation && this.wsObservation.obs.length > 0) {
+      // WebSocket data - battery voltage is at index 16
+      return this.wsObservation.obs[0][16];
+    }
+    return 3.3; // Default battery voltage
+  }
+
+  // Derived properties
+  get isRaining(): boolean {
+    return this.precipitationType === 1 || this.rainAccumulated > 0;
+  }
+
+  get isHailing(): boolean {
+    return this.precipitationType === 2;
+  }
+
+  get isLightningDetected(): boolean {
+    return this.lightningCount > 0 && this.lightningDistance > 0 && this.lightningDistance <= 50;
+  }
+
+  get batteryLevel(): number {
+    // Convert voltage to percentage (typical range 2.4V to 3.6V for lithium)
+    const minVoltage = 2.4;
+    const maxVoltage = 3.6;
+    const voltage = this.batteryVoltage;
+    return Math.round(Math.max(0, Math.min(100, ((voltage - minVoltage) / (maxVoltage - minVoltage)) * 100)));
+  }
+
+  get isLowBattery(): boolean {
+    return this.batteryLevel < 20;
+  }
 }
 
 export class Tempest extends EventEmitter {

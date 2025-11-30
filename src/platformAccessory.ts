@@ -15,6 +15,22 @@ const SUN_FACING_WEST_UUID = 'b1234567-3333-4444-5555-666666666666';
 const SUN_HIGH_ELEVATION_UUID = 'b1234567-4444-5555-6666-777777777777';
 const SUN_BELOW_HORIZON_UUID = 'b1234567-5555-6666-7777-888888888888';
 
+// Weather sensor UUIDs
+const AIR_PRESSURE_UUID = 'c1234567-1111-2222-3333-444444444444';
+const UV_INDEX_UUID = 'c1234567-2222-3333-4444-555555555555';
+const SOLAR_RADIATION_UUID = 'c1234567-3333-4444-5555-666666666666';
+const WIND_SPEED_UUID = 'c1234567-4444-5555-6666-777777777777';
+const WIND_DIRECTION_UUID = 'c1234567-5555-6666-7777-888888888888';
+const WIND_GUST_UUID = 'c1234567-6666-7777-8888-999999999999';
+const RAIN_RATE_UUID = 'c1234567-7777-8888-9999-aaaaaaaaaaaa';
+const RAIN_ACCUMULATED_UUID = 'c1234567-8888-9999-aaaa-bbbbbbbbbbbb';
+const PRECIPITATION_TYPE_UUID = 'c1234567-9999-aaaa-bbbb-cccccccccccc';
+const LIGHTNING_DISTANCE_UUID = 'c1234567-aaaa-bbbb-cccc-dddddddddddd';
+const LIGHTNING_COUNT_UUID = 'c1234567-bbbb-cccc-dddd-eeeeeeeeeeee';
+const RAIN_DETECTED_UUID = 'c1234567-cccc-dddd-eeee-ffffffffffff';
+const HAIL_DETECTED_UUID = 'c1234567-dddd-eeee-ffff-gggggggggggg';
+const LIGHTNING_DETECTED_UUID = 'c1234567-eeee-ffff-gggg-hhhhhhhhhhhh';
+
 export interface SunPositionDevice {
   uniqueId: string;
   displayName: string;
@@ -35,13 +51,21 @@ export interface SunPositionDevice {
 export class SunPositionAccessory {
   private service: Service;
   private temperatureService?: Service;
+  private humidityService?: Service;
+  private airPressureService?: Service;
+  private uvIndexService?: Service;
+  private solarRadiationService?: Service;
+  private windService?: Service;
+  private rainService?: Service;
+  private lightningService?: Service;
+  private batteryService?: Service;
   private tempest?: Tempest;
   private updateTimer?: NodeJS.Timeout;
   private weatherFallbackTimer?: NodeJS.Timeout;
   private lastWebSocketUpdate: number = 0;
   private altitudeCharacteristic?: Characteristic;
   private azimuthCharacteristic?: Characteristic;
-  
+
   // Human-readable characteristics
   private sunFacingSouthCharacteristic?: Characteristic;
   private sunFacingEastCharacteristic?: Characteristic;
@@ -71,13 +95,9 @@ export class SunPositionAccessory {
     // Initialize with default lux value to prevent undefined warnings
     this.service.setCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, 0.0001);
 
-    // Create TemperatureSensor service for temperature data if Tempest is configured
+    // Create weather sensor services if Tempest is configured
     if (device.tempestKey && device.tempestStationID) {
-      this.temperatureService = this.accessory.getService(this.platform.Service.TemperatureSensor) ||
-        this.accessory.addService(this.platform.Service.TemperatureSensor, 'Air Temperature');
-      this.temperatureService.setCharacteristic(this.platform.Characteristic.Name, 'Air Temperature');
-      // Initialize with default temperature
-      this.temperatureService.setCharacteristic(this.platform.Characteristic.CurrentTemperature, 20);
+      this.setupWeatherServices();
     }
 
     // Create custom characteristics for altitude and azimuth
@@ -92,6 +112,45 @@ export class SunPositionAccessory {
 
     // Start position updates
     this.updatePosition();
+  }
+
+  private setupWeatherServices() {
+    // Helper function to create/get a service with initial characteristics
+    const createService = (serviceType: any, name: string, subtype?: string) => {
+      const service = this.accessory.getService(name) ||
+        this.accessory.addService(serviceType, name, subtype);
+      service.setCharacteristic(this.platform.Characteristic.Name, name);
+      return service;
+    };
+
+    // Temperature sensor
+    this.temperatureService = createService(this.platform.Service.TemperatureSensor, 'Air Temperature');
+    this.temperatureService.setCharacteristic(this.platform.Characteristic.CurrentTemperature, 20);
+
+    // Humidity sensor
+    this.humidityService = createService(this.platform.Service.HumiditySensor, 'Humidity');
+    this.humidityService.setCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, 50);
+
+    // UV Index sensor (using LightSensor)
+    this.uvIndexService = createService(this.platform.Service.LightSensor, 'UV Index', 'uvindex');
+    this.uvIndexService.setCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, 0.0001);
+
+    // Solar Radiation sensor (using LightSensor)
+    this.solarRadiationService = createService(this.platform.Service.LightSensor, 'Solar Radiation', 'solar');
+    this.solarRadiationService.setCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, 0.0001);
+
+    // Rain sensor (using LeakSensor)
+    this.rainService = createService(this.platform.Service.LeakSensor, 'Rain Sensor');
+    this.rainService.setCharacteristic(this.platform.Characteristic.LeakDetected, false);
+
+    // Lightning sensor (using ContactSensor as base)
+    this.lightningService = createService(this.platform.Service.ContactSensor, 'Lightning Detector', 'lightning');
+    this.lightningService.setCharacteristic(this.platform.Characteristic.ContactSensorState, false);
+
+    // Battery service
+    this.batteryService = createService(this.platform.Service.Battery, 'Station Battery');
+    this.batteryService.setCharacteristic(this.platform.Characteristic.BatteryLevel, 100);
+    this.batteryService.setCharacteristic(this.platform.Characteristic.StatusLowBattery, false);
   }
 
   private createCustomCharacteristics() {
@@ -210,8 +269,16 @@ export class SunPositionAccessory {
     this.sunBelowHorizonCharacteristic = this.service.getCharacteristic(SunBelowHorizonCharacteristic) ||
       this.service.addCharacteristic(SunBelowHorizonCharacteristic);
 
+    // TODO: Add custom weather characteristics later
+    // this.createWeatherCharacteristics(Characteristic, Formats, Units, Perms);
+
     this.platform.log.debug('Custom characteristics created successfully');
   }
+
+  // TODO: Custom characteristics for weather data - implement later
+  // private createWeatherCharacteristics() {
+  //   // Custom characteristics will be added here in future updates
+  // }
 
   private setupTempestWebSocket(stationId: string) {
     if (!this.tempest) {
@@ -274,14 +341,52 @@ export class SunPositionAccessory {
         this.lastWebSocketUpdate = Date.now();
       }
 
-      this.platform.log.info(`Weather update (${source}) - Lux: ${lux}, Temperature: ${tempestData.airTemperature}°C`);
+      this.platform.log.info(`Weather update (${source}) - T: ${tempestData.airTemperature}°C, H: ${tempestData.humidity}%, ` +
+        `P: ${tempestData.pressure}MB, UV: ${tempestData.uvIndex}, Wind: ${tempestData.windSpeed}m/s @ ${tempestData.windDirection}°`);
 
+      // Update main light sensor
       this.service.updateCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, lux);
 
-      // Update temperature on the separate TemperatureSensor service
+      // Update temperature service
       if (this.temperatureService) {
         this.temperatureService.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, tempestData.airTemperature);
       }
+
+      // Update humidity service
+      if (this.humidityService) {
+        this.humidityService.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, tempestData.humidity);
+      }
+
+      // Update rain service (using standard HomeKit LeakSensor)
+      if (this.rainService) {
+        this.rainService.updateCharacteristic(this.platform.Characteristic.LeakDetected, tempestData.isRaining);
+      }
+
+      // Update lightning service (using standard HomeKit ContactSensor)
+      if (this.lightningService) {
+        this.lightningService.updateCharacteristic(this.platform.Characteristic.ContactSensorState, tempestData.isLightningDetected);
+      }
+
+      // Update UV Index as light sensor
+      if (this.uvIndexService) {
+        // Map UV index (0-15) to lux-like values for display
+        const uvAsLux = tempestData.uvIndex * 1000; // Scale UV index for visibility
+        this.uvIndexService.updateCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, Math.max(0.0001, uvAsLux));
+      }
+
+      // Update solar radiation as light sensor
+      if (this.solarRadiationService) {
+        // Use solar radiation directly as lux (W/m² is similar scale)
+        const solarAsLux = Math.max(0.0001, tempestData.solarRadiation);
+        this.solarRadiationService.updateCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, solarAsLux);
+      }
+
+      // Update battery service
+      if (this.batteryService) {
+        this.batteryService.updateCharacteristic(this.platform.Characteristic.BatteryLevel, tempestData.batteryLevel);
+        this.batteryService.updateCharacteristic(this.platform.Characteristic.StatusLowBattery, tempestData.isLowBattery);
+      }
+
     } catch (err) {
       this.platform.log.error('Failed to update weather data:', err instanceof Error ? err.message : 'Unknown error');
     }
