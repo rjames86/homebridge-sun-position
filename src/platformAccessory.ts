@@ -15,8 +15,6 @@ const SUN_FACING_WEST_UUID = 'b1234567-3333-4444-5555-666666666666';
 const SUN_HIGH_ELEVATION_UUID = 'b1234567-4444-5555-6666-777777777777';
 const SUN_BELOW_HORIZON_UUID = 'b1234567-5555-6666-7777-888888888888';
 
-// Weather sensor UUIDs
-const BATTERY_VOLTAGE_UUID = 'DB0EB40A-6131-4CC1-9372-840EC317FEEB';
 
 export interface SunPositionDevice {
   uniqueId: string;
@@ -59,7 +57,6 @@ export class SunPositionAccessory {
   private sunFacingWestCharacteristic?: Characteristic;
   private sunHighElevationCharacteristic?: Characteristic;
   private sunBelowHorizonCharacteristic?: Characteristic;
-  private batteryVoltageCharacteristic?: Characteristic;
 
   constructor(
     private readonly platform: SunPositionPlatform,
@@ -140,8 +137,6 @@ export class SunPositionAccessory {
     this.batteryService.setCharacteristic(this.platform.Characteristic.BatteryLevel, 100);
     this.batteryService.setCharacteristic(this.platform.Characteristic.StatusLowBattery, false);
 
-    // Add custom battery voltage characteristic
-    this.addBatteryVoltageCharacteristic();
   }
 
   private createCustomCharacteristics() {
@@ -266,39 +261,6 @@ export class SunPositionAccessory {
     this.platform.log.debug('Custom characteristics created successfully');
   }
 
-  private addBatteryVoltageCharacteristic() {
-    if (!this.batteryService) return;
-
-    const { Characteristic, Formats, Perms } = this.platform.api.hap;
-
-    // Create Battery Voltage characteristic class
-    class BatteryVoltageCharacteristic extends Characteristic {
-      static readonly UUID = BATTERY_VOLTAGE_UUID;
-
-      constructor() {
-        super('Battery Voltage', BatteryVoltageCharacteristic.UUID, {
-          format: Formats.FLOAT,
-          unit: 'V',
-          minValue: 0,
-          maxValue: 5,
-          minStep: 0.01,
-          perms: [Perms.PAIRED_READ, Perms.NOTIFY],
-        });
-        this.value = this.getDefaultValue();
-      }
-    }
-
-    try {
-      // Add characteristic using class instead of UUID
-      this.batteryVoltageCharacteristic = this.batteryService.getCharacteristic(BatteryVoltageCharacteristic) ||
-        this.batteryService.addCharacteristic(BatteryVoltageCharacteristic);
-
-      // Set initial value
-      this.batteryVoltageCharacteristic.updateValue(3.3);
-    } catch (error) {
-      this.platform.log.error('Failed to add battery voltage characteristic:', error instanceof Error ? error.message : 'Unknown error');
-    }
-  }
 
   // TODO: Custom characteristics for weather data - implement later
   // private createWeatherCharacteristics() {
@@ -412,10 +374,6 @@ export class SunPositionAccessory {
         this.batteryService.updateCharacteristic(this.platform.Characteristic.BatteryLevel, tempestData.batteryLevel);
         this.batteryService.updateCharacteristic(this.platform.Characteristic.StatusLowBattery, tempestData.isLowBattery);
 
-        // Update custom battery voltage characteristic
-        if (this.batteryVoltageCharacteristic) {
-          this.batteryVoltageCharacteristic.updateValue(tempestData.batteryVoltage);
-        }
       }
 
     } catch (err) {
