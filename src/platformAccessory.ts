@@ -301,11 +301,18 @@ export class SunPositionAccessory {
       }
     }
 
-    // Add the voltage characteristic to the same battery service
-    this.batteryService.addCharacteristic(BatteryVoltageCharacteristic);
+    try {
+      // Check if characteristic already exists, if not add it
+      let voltageCharacteristic = this.batteryService.getCharacteristic(BATTERY_VOLTAGE_UUID);
+      if (!voltageCharacteristic) {
+        voltageCharacteristic = this.batteryService.addCharacteristic(BatteryVoltageCharacteristic);
+      }
 
-    // Set initial value
-    this.batteryService.setCharacteristic(BATTERY_VOLTAGE_UUID, 3.3);
+      // Set initial value
+      voltageCharacteristic.updateValue(3.3);
+    } catch (error) {
+      this.platform.log.error('Failed to add battery voltage characteristic:', error instanceof Error ? error.message : 'Unknown error');
+    }
   }
 
   // TODO: Custom characteristics for weather data - implement later
