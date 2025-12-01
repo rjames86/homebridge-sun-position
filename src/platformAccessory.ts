@@ -15,7 +15,7 @@ const SUN_FACING_WEST_UUID = 'b1234567-3333-4444-5555-666666666666';
 const SUN_HIGH_ELEVATION_UUID = 'b1234567-4444-5555-6666-777777777777';
 const SUN_BELOW_HORIZON_UUID = 'b1234567-5555-6666-7777-888888888888';
 
-// Weather sensor UUIDs
+// Weather sensor UUIDs (using valid hex characters only)
 const AIR_PRESSURE_UUID = 'c1234567-1111-2222-3333-444444444444';
 const UV_INDEX_UUID = 'c1234567-2222-3333-4444-555555555555';
 const SOLAR_RADIATION_UUID = 'c1234567-3333-4444-5555-666666666666';
@@ -28,9 +28,9 @@ const PRECIPITATION_TYPE_UUID = 'c1234567-9999-aaaa-bbbb-cccccccccccc';
 const LIGHTNING_DISTANCE_UUID = 'c1234567-aaaa-bbbb-cccc-dddddddddddd';
 const LIGHTNING_COUNT_UUID = 'c1234567-bbbb-cccc-dddd-eeeeeeeeeeee';
 const RAIN_DETECTED_UUID = 'c1234567-cccc-dddd-eeee-ffffffffffff';
-const HAIL_DETECTED_UUID = 'c1234567-dddd-eeee-ffff-gggggggggggg';
-const LIGHTNING_DETECTED_UUID = 'c1234567-eeee-ffff-gggg-hhhhhhhhhhhh';
-const BATTERY_VOLTAGE_UUID = 'c1234567-ffff-gggg-hhhh-iiiiiiiiiiii';
+const HAIL_DETECTED_UUID = 'c1234567-dddd-eeee-ffff-000000000000';
+const LIGHTNING_DETECTED_UUID = 'c1234567-eeee-ffff-0000-111111111111';
+const BATTERY_VOLTAGE_UUID = 'c1234567-ffff-0000-1111-222222222222';
 
 export interface SunPositionDevice {
   uniqueId: string;
