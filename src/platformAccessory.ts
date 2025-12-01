@@ -109,11 +109,11 @@ export class SunPositionAccessory {
     };
 
     // Temperature sensor
-    this.temperatureService = createService(this.platform.Service.TemperatureSensor, 'Air Temperature');
+    this.temperatureService = createService(this.platform.Service.TemperatureSensor, 'Air Temperature', 'temperature');
     this.temperatureService.setCharacteristic(this.platform.Characteristic.CurrentTemperature, 20);
 
     // Humidity sensor
-    this.humidityService = createService(this.platform.Service.HumiditySensor, 'Humidity');
+    this.humidityService = createService(this.platform.Service.HumiditySensor, 'Humidity', 'humidity');
     this.humidityService.setCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, 50);
 
     // UV Index sensor (using LightSensor)
@@ -125,7 +125,7 @@ export class SunPositionAccessory {
     this.solarRadiationService.setCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, 0.0001);
 
     // Rain sensor (using LeakSensor)
-    this.rainService = createService(this.platform.Service.LeakSensor, 'Rain Sensor');
+    this.rainService = createService(this.platform.Service.LeakSensor, 'Rain Sensor', 'rain');
     this.rainService.setCharacteristic(this.platform.Characteristic.LeakDetected, false);
 
     // Lightning sensor (using ContactSensor as base)
@@ -133,7 +133,7 @@ export class SunPositionAccessory {
     this.lightningService.setCharacteristic(this.platform.Characteristic.ContactSensorState, false);
 
     // Battery service
-    this.batteryService = createService(this.platform.Service.Battery, 'Station Battery');
+    this.batteryService = createService(this.platform.Service.Battery, 'Station Battery', 'battery');
     this.batteryService.setCharacteristic(this.platform.Characteristic.BatteryLevel, 100);
     this.batteryService.setCharacteristic(this.platform.Characteristic.StatusLowBattery, false);
 
