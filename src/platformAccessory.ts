@@ -30,6 +30,7 @@ const LIGHTNING_COUNT_UUID = 'c1234567-bbbb-cccc-dddd-eeeeeeeeeeee';
 const RAIN_DETECTED_UUID = 'c1234567-cccc-dddd-eeee-ffffffffffff';
 const HAIL_DETECTED_UUID = 'c1234567-dddd-eeee-ffff-gggggggggggg';
 const LIGHTNING_DETECTED_UUID = 'c1234567-eeee-ffff-gggg-hhhhhhhhhhhh';
+const BATTERY_VOLTAGE_UUID = 'c1234567-ffff-gggg-hhhh-iiiiiiiiiiii';
 
 export interface SunPositionDevice {
   uniqueId: string;
@@ -87,10 +88,10 @@ export class SunPositionAccessory {
 
     // Create LightSensor service for Tempest weather data
     this.service = this.accessory.getService(this.platform.Service.LightSensor) ||
-      this.accessory.addService(this.platform.Service.LightSensor, 'Tempest');
+      this.accessory.addService(this.platform.Service.LightSensor, 'Illuminance', 'main');
 
     // Set the service name
-    this.service.setCharacteristic(this.platform.Characteristic.Name, device.displayName);
+    this.service.setCharacteristic(this.platform.Characteristic.Name, 'Illuminance');
 
     // Initialize with default lux value to prevent undefined warnings
     this.service.setCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, 0.0001);
@@ -151,6 +152,9 @@ export class SunPositionAccessory {
     this.batteryService = createService(this.platform.Service.Battery, 'Station Battery');
     this.batteryService.setCharacteristic(this.platform.Characteristic.BatteryLevel, 100);
     this.batteryService.setCharacteristic(this.platform.Characteristic.StatusLowBattery, false);
+
+    // Add custom battery voltage characteristic
+    this.addBatteryVoltageCharacteristic();
   }
 
   private createCustomCharacteristics() {
@@ -275,6 +279,35 @@ export class SunPositionAccessory {
     this.platform.log.debug('Custom characteristics created successfully');
   }
 
+  private addBatteryVoltageCharacteristic() {
+    if (!this.batteryService) return;
+
+    const { Characteristic, Formats, Perms } = this.platform.api.hap;
+
+    // Create Battery Voltage characteristic class
+    class BatteryVoltageCharacteristic extends Characteristic {
+      static readonly UUID = BATTERY_VOLTAGE_UUID;
+
+      constructor() {
+        super('Battery Voltage', BatteryVoltageCharacteristic.UUID, {
+          format: Formats.FLOAT,
+          unit: 'V',
+          minValue: 0,
+          maxValue: 5,
+          minStep: 0.01,
+          perms: [Perms.PAIRED_READ, Perms.NOTIFY],
+        });
+        this.value = this.getDefaultValue();
+      }
+    }
+
+    // Add the voltage characteristic to the same battery service
+    this.batteryService.addCharacteristic(BatteryVoltageCharacteristic);
+
+    // Set initial value
+    this.batteryService.setCharacteristic(BATTERY_VOLTAGE_UUID, 3.3);
+  }
+
   // TODO: Custom characteristics for weather data - implement later
   // private createWeatherCharacteristics() {
   //   // Custom characteristics will be added here in future updates
@@ -342,7 +375,8 @@ export class SunPositionAccessory {
       }
 
       this.platform.log.info(`Weather update (${source}) - T: ${tempestData.airTemperature}°C, H: ${tempestData.humidity}%, ` +
-        `P: ${tempestData.pressure}MB, UV: ${tempestData.uvIndex}, Wind: ${tempestData.windSpeed}m/s @ ${tempestData.windDirection}°`);
+        `P: ${tempestData.pressure}MB, UV: ${tempestData.uvIndex}, Wind: ${tempestData.windSpeed}m/s @ ${tempestData.windDirection}°, ` +
+        `Battery: ${tempestData.batteryLevel}% (${tempestData.batteryVoltage}V)`);
 
       // Update main light sensor
       this.service.updateCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, lux);
@@ -385,6 +419,13 @@ export class SunPositionAccessory {
       if (this.batteryService) {
         this.batteryService.updateCharacteristic(this.platform.Characteristic.BatteryLevel, tempestData.batteryLevel);
         this.batteryService.updateCharacteristic(this.platform.Characteristic.StatusLowBattery, tempestData.isLowBattery);
+
+        // Update custom battery voltage characteristic
+        try {
+          this.batteryService.updateCharacteristic(BATTERY_VOLTAGE_UUID, tempestData.batteryVoltage);
+        } catch (err) {
+          this.platform.log.debug('Battery voltage characteristic not found, skipping update');
+        }
       }
 
     } catch (err) {
