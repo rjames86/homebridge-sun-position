@@ -59,6 +59,7 @@ export class SunPositionAccessory {
   private sunFacingWestCharacteristic?: Characteristic;
   private sunHighElevationCharacteristic?: Characteristic;
   private sunBelowHorizonCharacteristic?: Characteristic;
+  private batteryVoltageCharacteristic?: Characteristic;
 
   constructor(
     private readonly platform: SunPositionPlatform,
@@ -288,14 +289,12 @@ export class SunPositionAccessory {
     }
 
     try {
-      // Check if characteristic already exists, if not add it
-      let voltageCharacteristic = this.batteryService.getCharacteristic(BATTERY_VOLTAGE_UUID);
-      if (!voltageCharacteristic) {
-        voltageCharacteristic = this.batteryService.addCharacteristic(BatteryVoltageCharacteristic);
-      }
+      // Add characteristic using class instead of UUID
+      this.batteryVoltageCharacteristic = this.batteryService.getCharacteristic(BatteryVoltageCharacteristic) ||
+        this.batteryService.addCharacteristic(BatteryVoltageCharacteristic);
 
       // Set initial value
-      voltageCharacteristic.updateValue(3.3);
+      this.batteryVoltageCharacteristic.updateValue(3.3);
     } catch (error) {
       this.platform.log.error('Failed to add battery voltage characteristic:', error instanceof Error ? error.message : 'Unknown error');
     }
@@ -414,10 +413,8 @@ export class SunPositionAccessory {
         this.batteryService.updateCharacteristic(this.platform.Characteristic.StatusLowBattery, tempestData.isLowBattery);
 
         // Update custom battery voltage characteristic
-        try {
-          this.batteryService.updateCharacteristic(BATTERY_VOLTAGE_UUID, tempestData.batteryVoltage);
-        } catch (err) {
-          this.platform.log.debug('Battery voltage characteristic not found, skipping update');
+        if (this.batteryVoltageCharacteristic) {
+          this.batteryVoltageCharacteristic.updateValue(tempestData.batteryVoltage);
         }
       }
 
