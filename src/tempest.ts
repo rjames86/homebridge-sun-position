@@ -246,15 +246,20 @@ export class Observations {
   }
 
   get batteryLevel(): number {
-    // Convert voltage to percentage (typical range 2.4V to 3.6V for lithium)
-    const minVoltage = 2.4;
-    const maxVoltage = 3.6;
+    // Tempest battery voltage ranges based on WeatherFlow documentation
+    // Full charge: ~2.75V, Low battery warning: ~2.35V, Critical: ~2.1V
+    const minVoltage = 2.1;   // Critical low (0%)
+    const maxVoltage = 2.75;  // Full charge (100%)
     const voltage = this.batteryVoltage;
-    return Math.round(Math.max(0, Math.min(100, ((voltage - minVoltage) / (maxVoltage - minVoltage)) * 100)));
+
+    // Use a more realistic curve for lithium battery discharge
+    const percentage = ((voltage - minVoltage) / (maxVoltage - minVoltage)) * 100;
+    return Math.round(Math.max(0, Math.min(100, percentage)));
   }
 
   get isLowBattery(): boolean {
-    return this.batteryLevel < 20;
+    // Low battery warning when voltage drops below 2.35V (~38% based on our curve)
+    return this.batteryVoltage < 2.35;
   }
 }
 
