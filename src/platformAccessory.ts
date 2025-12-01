@@ -345,29 +345,29 @@ export class SunPositionAccessory {
         this.humidityService.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, tempestData.humidity);
       }
 
-      // Update rain service (using standard HomeKit LeakSensor)
-      if (this.rainService) {
-        this.rainService.updateCharacteristic(this.platform.Characteristic.LeakDetected, tempestData.isRaining);
-      }
+      // // Update rain service (using standard HomeKit LeakSensor)
+      // if (this.rainService) {
+      //   this.rainService.updateCharacteristic(this.platform.Characteristic.LeakDetected, tempestData.isRaining);
+      // }
 
-      // Update lightning service (using standard HomeKit ContactSensor)
-      if (this.lightningService) {
-        this.lightningService.updateCharacteristic(this.platform.Characteristic.ContactSensorState, tempestData.isLightningDetected);
-      }
+      // // Update lightning service (using standard HomeKit ContactSensor)
+      // if (this.lightningService) {
+      //   this.lightningService.updateCharacteristic(this.platform.Characteristic.ContactSensorState, tempestData.isLightningDetected);
+      // }
 
-      // Update UV Index as light sensor
-      if (this.uvIndexService) {
-        // Map UV index (0-15) to lux-like values for display
-        const uvAsLux = tempestData.uvIndex * 1000; // Scale UV index for visibility
-        this.uvIndexService.updateCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, Math.max(0.0001, uvAsLux));
-      }
+      // // Update UV Index as light sensor
+      // if (this.uvIndexService) {
+      //   // Map UV index (0-15) to lux-like values for display
+      //   const uvAsLux = tempestData.uvIndex * 1000; // Scale UV index for visibility
+      //   this.uvIndexService.updateCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, Math.max(0.0001, uvAsLux));
+      // }
 
-      // Update solar radiation as light sensor
-      if (this.solarRadiationService) {
-        // Use solar radiation directly as lux (W/m² is similar scale)
-        const solarAsLux = Math.max(0.0001, tempestData.solarRadiation);
-        this.solarRadiationService.updateCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, solarAsLux);
-      }
+      // // Update solar radiation as light sensor
+      // if (this.solarRadiationService) {
+      //   // Use solar radiation directly as lux (W/m² is similar scale)
+      //   const solarAsLux = Math.max(0.0001, tempestData.solarRadiation);
+      //   this.solarRadiationService.updateCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, solarAsLux);
+      // }
 
       // Update battery service
       if (this.batteryService) {
