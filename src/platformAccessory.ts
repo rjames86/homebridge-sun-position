@@ -117,20 +117,20 @@ export class SunPositionAccessory {
     this.humidityService.setCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, 50);
 
     // UV Index sensor (using LightSensor)
-    this.uvIndexService = createService(this.platform.Service.LightSensor, 'UV Index', 'uvindex');
-    this.uvIndexService.setCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, 0.0001);
+    // this.uvIndexService = createService(this.platform.Service.LightSensor, 'UV Index', 'uvindex');
+    // this.uvIndexService.setCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, 0.0001);
 
     // Solar Radiation sensor (using LightSensor)
-    this.solarRadiationService = createService(this.platform.Service.LightSensor, 'Solar Radiation', 'solar');
-    this.solarRadiationService.setCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, 0.0001);
+    // this.solarRadiationService = createService(this.platform.Service.LightSensor, 'Solar Radiation', 'solar');
+    // this.solarRadiationService.setCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel, 0.0001);
 
     // Rain sensor (using LeakSensor)
-    this.rainService = createService(this.platform.Service.LeakSensor, 'Rain Sensor', 'rain');
-    this.rainService.setCharacteristic(this.platform.Characteristic.LeakDetected, false);
+    // this.rainService = createService(this.platform.Service.LeakSensor, 'Rain Sensor', 'rain');
+    // this.rainService.setCharacteristic(this.platform.Characteristic.LeakDetected, false);
 
     // Lightning sensor (using ContactSensor as base)
-    this.lightningService = createService(this.platform.Service.ContactSensor, 'Lightning Detector', 'lightning');
-    this.lightningService.setCharacteristic(this.platform.Characteristic.ContactSensorState, false);
+    // this.lightningService = createService(this.platform.Service.ContactSensor, 'Lightning Detector', 'lightning');
+    // this.lightningService.setCharacteristic(this.platform.Characteristic.ContactSensorState, false);
 
     // Battery service
     this.batteryService = createService(this.platform.Service.Battery, 'Station Battery', 'battery');
